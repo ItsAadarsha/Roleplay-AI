@@ -1,7 +1,8 @@
 import ollama
 from config import MODEL
 from memory import trim_memory
-from personalities import pick_personality, textPrompt
+from personalities import pick_personality
+from config import textPrompt
 from database import save_session, pick_session
 from cli import header, print_message, prompt_input, info
 from response import get_response
