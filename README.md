@@ -44,6 +44,4 @@ python main.py
 
 - Open a PR with focused changes. Run the app locally and include any test instructions in the PR description.
 
-**License**
 
-- Unlicensed — ask the project owner for a preferred license.
