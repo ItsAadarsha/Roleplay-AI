@@ -16,8 +16,10 @@ def summarize(messages):
   
 
 def trim_memory(messages, system_message):
-    old = messages[1:-10]
-    new = messages[-10:]
+    
+    non_system = [m for m in messages if m.get("role") != "system"]
+    old = non_system[:-10]
+    new = non_system[-10:]
     summary = summarize(old)
     return [
         system_message,
