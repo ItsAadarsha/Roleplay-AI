@@ -11,10 +11,11 @@ def get_client():
     return ai.Client(provider_configs=provider_configs if provider_configs else None)
 
 def get_response(messages, retries=3, backoff=2):
-    # Retries on transient errors (rate limits, connection issues, 5xx)
-    # Raises immediately on non-retryable errors (auth, bad request, etc.)
     client = get_client()
     last_error = None
+
+    TRANSIENT_KEYWORDS = ("rate limit", "429", "500", "502", "503", "connection")
+    TIMEOUT_KEYWORDS = ("timeout", "timed out")
 
     for attempt in range(1, retries + 1):
         try:
@@ -30,10 +31,13 @@ def get_response(messages, retries=3, backoff=2):
         except Exception as e:
             last_error = e
             err_str = str(e).lower()
-            # Only retry on transient errors; everything else bubbles up
-            if any(k in err_str for k in ("rate limit", "429", "500", "502", "503", "connection")):
-                wait = backoff * attempt
-                print(f"[API error] Retrying in {wait}s... (attempt {attempt}/{retries}): {e}")
+
+            is_timeout = any(k in err_str for k in TIMEOUT_KEYWORDS)
+            is_transient = any(k in err_str for k in TRANSIENT_KEYWORDS)
+
+            if is_timeout or is_transient:
+                wait = backoff * attempt * (3 if is_timeout else 1)
+                print(f"[Attempt {attempt}/{retries}] {'Timeout' if is_timeout else 'Transient error'} — retrying in {wait}s: {e}")
                 time.sleep(wait)
             else:
                 raise
