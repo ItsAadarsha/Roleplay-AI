@@ -1,0 +1,4 @@
+ollama
+openai
+dotenv
+pymongo

@@ -1,6 +1,6 @@
 import ollama
 from config import MODEL
-
+from response import get_response
 
 def summarize(messages):
   summary_prompt = [
@@ -13,12 +13,9 @@ def summarize(messages):
           "content": f"Summarize this chat:\n\n{messages}"
       }
   ]
-  response = ollama.chat(
-        model=MODEL,
-        messages=summary_prompt,
-    )
+  return get_response(summary_prompt)
 
-  return response["message"]["content"]
+  
 
 def trim_memory(messages, system_message):
     old = messages[1:-10]

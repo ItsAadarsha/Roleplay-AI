@@ -4,7 +4,7 @@ from memory import trim_memory
 from personalities import pick_personality, textPrompt
 from database import save_session, pick_session
 from cli import header, print_message, prompt_input, info
-
+from response import get_response
 def run():
     
     persona = pick_personality()
@@ -73,12 +73,8 @@ def run():
         user_sent = True
         messages_since_trim += 1
 
-        response = ollama.chat(
-            model=MODEL,
-            messages=messages,
-        )
 
-        assistant_msg = response["message"]["content"]
+        assistant_msg = get_response(messages)
         print_message("assistant", persona["name"], assistant_msg)
         print()
 
