@@ -1,16 +1,18 @@
+# Handles all LLM API calls via aisuite, with retry logic
 import aisuite as ai
 import time
 from config import AISUITE_MODEL, PROVIDER, API_KEY
 
-# aisuite reads provider API keys from environment variables automatically,
-# but we pass explicit config for providers that need it (e.g. ollama base_url)
 def get_client():
+    # For ollama we need to point aisuite at the local server URL
     provider_configs = {}
     if PROVIDER == "ollama":
         provider_configs["ollama"] = {"base_url": "http://localhost:11434/api"}
     return ai.Client(provider_configs=provider_configs if provider_configs else None)
 
 def get_response(messages, retries=3, backoff=2):
+    # Retries on transient errors (rate limits, connection issues, 5xx)
+    # Raises immediately on non-retryable errors (auth, bad request, etc.)
     client = get_client()
     last_error = None
 
@@ -28,7 +30,7 @@ def get_response(messages, retries=3, backoff=2):
         except Exception as e:
             last_error = e
             err_str = str(e).lower()
-            # Detect rate limit or server errors for retry; bail on auth/bad request
+            # Only retry on transient errors; everything else bubbles up
             if any(k in err_str for k in ("rate limit", "429", "500", "502", "503", "connection")):
                 wait = backoff * attempt
                 print(f"[API error] Retrying in {wait}s... (attempt {attempt}/{retries}): {e}")

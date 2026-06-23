@@ -1,5 +1,7 @@
+# Terminal UI helpers — colors, formatted output, and user input
 import datetime
 
+# ANSI color codes
 RESET = "\033[0m"
 BOLD = "\033[1m"
 CYAN = "\033[96m"
@@ -10,6 +12,7 @@ RED = "\033[91m"
 
 
 def header(text):
+    # Prints a bold magenta banner around the given text
     line = "=" * max(40, len(text) + 4)
     print(f"{MAGENTA}{line}{RESET}")
     print(f"{BOLD}{MAGENTA}  {text}{RESET}")
@@ -21,22 +24,27 @@ def subheader(text):
 
 
 def info(text):
+    # Informational message in cyan
     print(f"{CYAN}[i]{RESET} {text}")
 
 
 def success(text):
+    # Success confirmation in green
     print(f"{GREEN}[✓]{RESET} {text}")
 
 
 def error(text):
+    # Error message in red
     print(f"{RED}[!] {text}{RESET}")
 
 
 def prompt_input(prompt_text):
+    # Styled input prompt; returns the raw string the user typed
     return input(f"{BOLD}{YELLOW}{prompt_text}{RESET} ")
 
 
 def print_sessions(sessions):
+    # Lists sessions with index, timestamp, and message count
     if not sessions:
         info("No previous sessions found.")
         return
@@ -52,6 +60,7 @@ def print_sessions(sessions):
 
 
 def print_message(role, name, content):
+    # Prints a chat message; user lines show "You:", assistant lines show the persona name
     if role == "user":
         print(f"{BOLD}{YELLOW}You:{RESET} {content}")
     else:

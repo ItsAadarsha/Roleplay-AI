@@ -1,3 +1,4 @@
+# Main chat loop — orchestrates persona, session, message flow, and memory trimming
 from memory import trim_memory
 from personalities import pick_personality
 from config import textPrompt
@@ -7,35 +8,35 @@ from cli import header, print_message, prompt_input, info
 from response import get_response
 
 def run():
-    
+    # Pick or create a persona, then greet the user
     persona = pick_personality()
     header(f"Now chatting with {persona['name']}")
     print("Type 'Exit' to quit.\n")
 
-
+    # Build the system message from the persona's config + global style prompt
     template = f"{persona.get('system','')}\n\n{textPrompt}\n\nScenario: {persona.get('Scenario','')}"
     system_message = {
         "role": "system",
         "content": template
     }
 
+    # Load an existing session or start fresh
     messages, existing_session, full_messages = load_session(persona, system_message)
 
+    # Track how many user messages existed before this run (for save-on-exit logic)
     initial_user_count = sum(1 for m in messages if m.get("role") == "user")
-    # Only trim after this many new messages have been added in this run
-    TRIM_INTERVAL = 5
+    TRIM_INTERVAL = 5       # trigger memory trim every N new messages
     messages_since_trim = 0
-    # runtime flag: becomes True when the user sends a message during this run
-    user_sent = False
+    user_sent = False       # becomes True once the user sends their first message
 
-    actual_messages = full_messages  # Keep a full record of messages for saving
-    
-    
+    # full_messages is the complete untruncated history used for saving to DB
+    actual_messages = full_messages
+
     while True:
         user_input = prompt_input("You:")
+
         if user_input == 'Exit':
-            # If we received any user messages during this run, save the session.
-            # Fall back to the original count-based check for safety.
+            # Only save if the user actually sent something new this run
             if user_sent or sum(1 for m in messages if m.get("role") == "user") > initial_user_count:
                 if existing_session:
                     save_session(persona["name"], actual_messages, existing_session.get("_id"))
@@ -46,14 +47,11 @@ def run():
             print("Exiting...")
             return
 
-        messages.append({
-            "role": "user",
-            "content": user_input
-        })
+        messages.append({"role": "user", "content": user_input})
         user_sent = True
         messages_since_trim += 1
 
-
+        # Call the LLM; on failure let the user retry rather than crashing
         assistant_msg = None
         try:
             assistant_msg = get_response(messages)
@@ -65,13 +63,10 @@ def run():
         print_message("assistant", persona["name"], assistant_msg)
         print()
 
-        messages.append({
-            "role": "assistant",
-            "content": assistant_msg
-        })
+        messages.append({"role": "assistant", "content": assistant_msg})
         messages_since_trim += 1
 
-        # Trim only once every TRIM_INTERVAL messages to reduce calls
+        # Summarise and compress history once the trim interval is reached
         if messages_since_trim >= TRIM_INTERVAL:
             actual_messages.extend(messages)
             messages = trim_memory(messages, system_message)

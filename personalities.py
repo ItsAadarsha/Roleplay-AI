@@ -1,16 +1,18 @@
+# Manages persona selection and creation
 from database import db
 from cli import header, prompt_input, info
 from config import textPrompt
 
-
 personalities_col = db["personalities"]
 
 def get_personalities():
+    # Return all personas as a dict keyed by their "key" field
     results = personalities_col.find({}, {"_id": 0})
     return {p["key"]: p for p in results}
 
 
 def create_personality():
+    # Prompt the user to fill in a new persona and persist it to the DB
     header("Create a new persona")
     name = prompt_input("Name:").strip()
     system = prompt_input("System prompt (describe the personality):").strip()
@@ -19,7 +21,7 @@ def create_personality():
 
     personalities = get_personalities()
     keys = [int(p["key"]) for p in personalities.values()]
-    next_key = str(max(keys) + 1) if keys else "1"
+    next_key = str(max(keys) + 1) if keys else "1"  # auto-increment key
 
     new_persona = {
         "key": next_key,
@@ -35,6 +37,7 @@ def create_personality():
 
 
 def pick_personality():
+    # List available personas and let the user choose or create a new one
     personalities = get_personalities()
 
     header("Pick a personality")
@@ -51,4 +54,3 @@ def pick_personality():
         info("Invalid choice, defaulting to first persona.")
 
     return personalities.get(choice, list(personalities.values())[0])
-  
