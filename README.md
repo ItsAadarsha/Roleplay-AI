@@ -1,47 +1,125 @@
-**Roleplay Chat — Local AI Conversational App**
+# Roleplay Chat — Local AI Conversational App
 
-- **Purpose:**: Small CLI app for roleplay conversations with configurable personalities and a chat backend (OpenAI / Ollama / Claude).
-- **Language:**: Python 3.11+ (tested on 3.13) with a virtual environment.
+A CLI application for immersive roleplay conversations with AI-powered characters. Supports multiple LLM providers (OpenAI, Anthropic Claude, Ollama) with persistent sessions and customizable personalities.
 
-**Quick Start**
+## Features
 
-- **Create env:**: 
+- **Multiple AI Providers**: Works with OpenAI, Anthropic Claude, and local Ollama models
+- **Persistent Sessions**: Conversations are saved and can be resumed later
+- **Custom Personalities**: Create and select different character personas
+- **Memory Management**: Automatic conversation trimming and summarization
+- **MongoDB Storage**: Session persistence using MongoDB
 
+## Requirements
+
+- Python 3.11+ (tested on 3.13)
+- MongoDB (for session persistence)
+- API key for your chosen provider (OpenAI or Anthropic)
+
+## Quick Start
+
+### 1. Set up Virtual Environment
+
+**Windows (PowerShell):**
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-- **Environment:**: Set these env vars before running.
-  - **API_KEY:**: Your provider API key.
-  - **PROVIDER:**: `openai` | `ollama` | `claude` (choose matching provider).
-  - **MODEL:**: Model identifier used by your provider (e.g. `gpt-4o-mini`, `llama2`, etc.).
+**Linux/macOS:**
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-- **Run:**:
+### 2. Configure Environment Variables
+
+Create a `.env` file in the project root with the following variables:
+
+```env
+API_KEY=your_api_key_here
+PROVIDER=openai
+MODEL_NAME=gpt-4o-mini
+MONGO_URI=mongodb://localhost:27017
+```
+
+**Provider Options:**
+- `openai` - OpenAI GPT models
+- `anthropic` - Anthropic Claude models
+- `ollama` - Local Ollama models
+
+### 3. Run the Application
 
 ```powershell
+cd backend/app
 python main.py
 ```
 
-**Important Files**
+## Usage
 
-- **`main.py`:**: CLI entrypoint that launches the chat loop.
-- **`chat.py`:**:: Handles runtime chat loop, input/output, and session saving.
-- **`response.py`:**:: Wraps the provider client and sends chat requests.
-- **`session_manager.py`:**: Loads/resumes sessions from the database and trims messages.
-- **`database.py`:**:: Persistence helpers (sessions storage).
-- **`memory.py`:**:: Conversation summarization and trimming helpers.
-- **`personalities.py`:**:: Personality definitions and selection logic.
-- **`config.py`:**: Project configuration (MODEL, PROVIDER, API_KEY, textPrompt).
+1. **Select or Create a Persona**: On startup, choose an existing personality or create a new one
+2. **Start Chatting**: Type your message and press Enter
+3. **Exit**: Type `Exit` to save your session and quit
 
-**Notes & Troubleshooting**
+## Project Structure
 
-- If you see a JSON "Circular reference detected" error when calling the provider, ensure the `messages` you pass to `response.get_response()` is a flat list of message dicts (no nested lists or objects).
-- The app uses a simple summarization + trimming strategy. If sessions grow unexpectedly large, increase trimming frequency or shorten saved history.
+```
+backend/
+├── app/
+│   ├── main.py            # Entry point
+│   ├── chat.py            # Main chat loop and orchestration
+│   ├── cli.py             # CLI utilities (formatting, input/output)
+│   ├── config.py          # Configuration and environment loading
+│   ├── database.py        # MongoDB session persistence
+│   ├── memory.py          # Conversation summarization and trimming
+│   ├── personalities.py   # Personality definitions and selection
+│   ├── response.py        # LLM provider integration
+│   └── session_manager.py # Session loading/resumption logic
+└── tests/
+    ├── conftest.py        # Test fixtures
+    ├── test_personalities.py
+    └── test_memory.py
+```
 
-**Contributing**
+## Dependencies
 
-- Open a PR with focused changes. Run the app locally and include any test instructions in the PR description.
+- **aisuite** - Unified interface for multiple LLM providers
+- **pymongo** - MongoDB driver for Python
+- **python-dotenv** - Environment variable management
+- **pytest** - Testing framework
 
+## Testing
 
+Run the test suite:
+
+```powershell
+cd backend
+pytest
+```
+
+## Troubleshooting
+
+### JSON Circular Reference Error
+If you see a "Circular reference detected" error, ensure the `messages` list passed to `get_response()` is a flat list of message dictionaries with no nested objects.
+
+### Session Growing Too Large
+The app uses summarization and trimming to manage conversation history. If sessions grow unexpectedly large:
+- Increase trimming frequency in `memory.py`
+- Shorten saved history
+
+### MongoDB Connection Issues
+Ensure MongoDB is running and accessible at the `MONGO_URI` specified in your `.env` file.
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests locally
+5. Open a pull request with a clear description
+
+## License
+
+See [license](license) file for details.
