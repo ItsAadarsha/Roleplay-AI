@@ -1,5 +1,32 @@
+# Environments
 .env
-__pycache__/
 .venv/
+env/
+venv/
+ENV/
+
+# Python compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDEs/Editors
 .vscode/
+.idea/
+*.swp
+*.swo
+
+# Tools/Testing
+.pytest_cache/
+.VSCodeCounter/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project files
 todo.txt
