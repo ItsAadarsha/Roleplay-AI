@@ -1,4 +1,5 @@
 # Handles all MongoDB operations for sessions
+import sys
 from pymongo import MongoClient
 from datetime import datetime
 from config import MONGO_URI
@@ -13,10 +14,10 @@ db = client["chatbot"]
 sessions_col = db["sessions"]
 
 def save_session(persona_name, messages, session_id=None):
-    """Save a new session or update an existing one.
+    # Save a new session or update an existing one.
 
-    If `session_id` is provided, update that document instead of inserting.
-    """
+    # If `session_id` is provided, update that document instead of inserting.
+    
     if not messages:
         info("No messages to save.")
         return
@@ -55,24 +56,35 @@ def get_sessions(persona_name):
     return list(results)
 
 def pick_session(persona_name):
-    # Show existing sessions and let the user choose one, or start fresh
     sessions = get_sessions(persona_name)
 
     if not sessions:
         return None
 
     print_sessions(sessions)
-    choice = prompt_input("Enter number or N:").strip().lower()
+    while True:
+        try:
+            choice = prompt_input("Enter number, N for new session, or Exit to quit:").strip().lower()
 
-    if choice == "n":
-        return None
+            if not choice:
+                print("Input cannot be empty. Please try again.")
+                continue
 
-    try:
-        index = int(choice) - 1
-        if 0 <= index < len(sessions):
-            return sessions[index]
-    except ValueError:
-        pass
+            if choice == "exit":
+                print("Exiting program. Goodbye!")
+                sys.exit(0)
 
-    info("Invalid choice, starting new session.")
-    return None
+            if choice == "n":
+                return None
+
+            index = int(choice) - 1
+            if 0 <= index < len(sessions):
+                return sessions[index]
+            else:
+                print(f"Please enter a number between 1 and {len(sessions)}.")
+
+        except ValueError:
+            print("Invalid input. Enter a number, N, or Exit.")
+        except (KeyboardInterrupt, EOFError):
+            print("\nInput cancelled.")
+            return None

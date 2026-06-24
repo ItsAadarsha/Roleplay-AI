@@ -361,8 +361,8 @@ class TestPickSession:
     """Test suite for pick_session() function."""
 
     @patch('database.get_sessions')
-    def test_pick_session_returns_none_when_no_sessions(self, mock_get_sessions):
-        """Test that pick_session returns None when no sessions exist."""
+    def test_pick_session_no_sessions_returns_none(self, mock_get_sessions):
+        """Test that pick_session returns None if no sessions exist."""
         # Arrange
         mock_get_sessions.return_value = []
         
@@ -371,198 +371,147 @@ class TestPickSession:
         
         # Assert
         assert result is None
+        mock_get_sessions.assert_called_once_with("Lyra")
 
     @patch('database.prompt_input')
     @patch('database.print_sessions')
     @patch('database.get_sessions')
-    def test_pick_session_user_enters_n(self, mock_get_sessions, mock_print, mock_prompt):
-        """Test that pick_session returns None when user enters 'n'."""
+    def test_pick_session_returns_none_on_n(self, mock_get_sessions, mock_print_sessions, mock_prompt_input):
+        """Test that entering 'n' or 'N' returns None."""
         # Arrange
-        mock_sessions = [
-            {"_id": ObjectId(), "created_at": datetime.now(), "messages": []}
-        ]
-        mock_get_sessions.return_value = mock_sessions
-        mock_prompt.return_value = "n"
+        mock_get_sessions.return_value = [{"_id": "1", "created_at": datetime.now(), "messages": []}]
+        mock_prompt_input.return_value = " N "  # Test trimming and case-insensitivity
         
         # Act
         result = pick_session("Lyra")
         
         # Assert
         assert result is None
-        mock_print.assert_called_once_with(mock_sessions)
+        mock_print_sessions.assert_called_once()
 
     @patch('database.prompt_input')
     @patch('database.print_sessions')
     @patch('database.get_sessions')
-    def test_pick_session_user_selects_valid_session(self, mock_get_sessions, mock_print, mock_prompt):
-        """Test that pick_session returns selected session when user enters valid number."""
+    def test_pick_session_returns_session_on_valid_index(self, mock_get_sessions, mock_print_sessions, mock_prompt_input):
+        """Test that entering a valid index returns the correct session."""
         # Arrange
-        mock_sessions = [
-            {"_id": ObjectId(), "created_at": datetime.now(), "messages": [{"role": "user", "content": "Test1"}]},
-            {"_id": ObjectId(), "created_at": datetime.now(), "messages": [{"role": "user", "content": "Test2"}]},
-            {"_id": ObjectId(), "created_at": datetime.now(), "messages": [{"role": "user", "content": "Test3"}]}
+        sessions = [
+            {"_id": "session1", "created_at": datetime.now(), "messages": []},
+            {"_id": "session2", "created_at": datetime.now(), "messages": []}
         ]
-        mock_get_sessions.return_value = mock_sessions
-        mock_prompt.return_value = "2"
+        mock_get_sessions.return_value = sessions
+        mock_prompt_input.return_value = "2"
         
         # Act
         result = pick_session("Lyra")
         
         # Assert
-        assert result == mock_sessions[1]
+        assert result == sessions[1]
 
-    @patch('database.info')
+    @patch('builtins.print')
     @patch('database.prompt_input')
     @patch('database.print_sessions')
     @patch('database.get_sessions')
-    def test_pick_session_user_enters_invalid_number(self, mock_get_sessions, mock_print, mock_prompt, mock_info):
-        """Test that pick_session returns None when user enters invalid number."""
+    def test_pick_session_exits_on_exit(self, mock_get_sessions, mock_print_sessions, mock_prompt_input, mock_print):
+        """Test that entering 'exit' raises SystemExit(0)."""
         # Arrange
-        mock_sessions = [
-            {"_id": ObjectId(), "created_at": datetime.now(), "messages": []}
-        ]
-        mock_get_sessions.return_value = mock_sessions
-        mock_prompt.return_value = "99"
+        mock_get_sessions.return_value = [{"_id": "1", "created_at": datetime.now(), "messages": []}]
+        mock_prompt_input.return_value = " ExIt "
+        
+        # Act & Assert
+        with pytest.raises(SystemExit) as exc_info:
+            pick_session("Lyra")
+        
+        assert exc_info.value.code == 0
+        mock_print.assert_any_call("Exiting program. Goodbye!")
+
+    @patch('builtins.print')
+    @patch('database.prompt_input')
+    @patch('database.print_sessions')
+    @patch('database.get_sessions')
+    def test_pick_session_empty_input_then_valid(self, mock_get_sessions, mock_print_sessions, mock_prompt_input, mock_print):
+        """Test that empty input is handled and loops until a valid input is given."""
+        # Arrange
+        sessions = [{"_id": "session1", "created_at": datetime.now(), "messages": []}]
+        mock_get_sessions.return_value = sessions
+        mock_prompt_input.side_effect = ["", "1"]
         
         # Act
         result = pick_session("Lyra")
         
         # Assert
-        assert result is None
-        mock_info.assert_called_once_with("Invalid choice, starting new session.")
+        assert result == sessions[0]
+        mock_print.assert_any_call("Input cannot be empty. Please try again.")
 
-    @patch('database.info')
+    @patch('builtins.print')
     @patch('database.prompt_input')
     @patch('database.print_sessions')
     @patch('database.get_sessions')
-    def test_pick_session_user_enters_zero(self, mock_get_sessions, mock_print, mock_prompt, mock_info):
-        """Test that pick_session returns None when user enters 0."""
+    def test_pick_session_out_of_bounds_then_valid(self, mock_get_sessions, mock_print_sessions, mock_prompt_input, mock_print):
+        """Test that out of bounds index prints error and loops until valid."""
         # Arrange
-        mock_sessions = [
-            {"_id": ObjectId(), "created_at": datetime.now(), "messages": []}
-        ]
-        mock_get_sessions.return_value = mock_sessions
-        mock_prompt.return_value = "0"
+        sessions = [{"_id": "session1", "created_at": datetime.now(), "messages": []}]
+        mock_get_sessions.return_value = sessions
+        mock_prompt_input.side_effect = ["0", "2", "1"]
         
         # Act
         result = pick_session("Lyra")
         
         # Assert
-        assert result is None
-        mock_info.assert_called_once_with("Invalid choice, starting new session.")
+        assert result == sessions[0]
+        mock_print.assert_any_call("Please enter a number between 1 and 1.")
 
-    @patch('database.info')
+    @patch('builtins.print')
     @patch('database.prompt_input')
     @patch('database.print_sessions')
     @patch('database.get_sessions')
-    def test_pick_session_user_enters_negative_number(self, mock_get_sessions, mock_print, mock_prompt, mock_info):
-        """Test that pick_session returns None when user enters negative number."""
+    def test_pick_session_invalid_format_then_valid(self, mock_get_sessions, mock_print_sessions, mock_prompt_input, mock_print):
+        """Test that non-numeric invalid input prints error and loops until valid."""
         # Arrange
-        mock_sessions = [
-            {"_id": ObjectId(), "created_at": datetime.now(), "messages": []}
-        ]
-        mock_get_sessions.return_value = mock_sessions
-        mock_prompt.return_value = "-1"
+        sessions = [{"_id": "session1", "created_at": datetime.now(), "messages": []}]
+        mock_get_sessions.return_value = sessions
+        mock_prompt_input.side_effect = ["not-a-number", "1"]
         
         # Act
         result = pick_session("Lyra")
         
         # Assert
-        assert result is None
-        mock_info.assert_called_once_with("Invalid choice, starting new session.")
+        assert result == sessions[0]
+        mock_print.assert_any_call("Invalid input. Enter a number, N, or Exit.")
 
-    @patch('database.info')
+    @patch('builtins.print')
     @patch('database.prompt_input')
     @patch('database.print_sessions')
     @patch('database.get_sessions')
-    def test_pick_session_user_enters_non_numeric(self, mock_get_sessions, mock_print, mock_prompt, mock_info):
-        """Test that pick_session returns None when user enters non-numeric value."""
+    def test_pick_session_keyboard_interrupt(self, mock_get_sessions, mock_print_sessions, mock_prompt_input, mock_print):
+        """Test that KeyboardInterrupt returns None and prints cancellation message."""
         # Arrange
-        mock_sessions = [
-            {"_id": ObjectId(), "created_at": datetime.now(), "messages": []}
-        ]
-        mock_get_sessions.return_value = mock_sessions
-        mock_prompt.return_value = "abc"
-        
-        # Act
-        result = pick_session("Lyra")
-        
-        # Assert
-        assert result is None
-        mock_info.assert_called_once_with("Invalid choice, starting new session.")
-
-    @patch('database.prompt_input')
-    @patch('database.print_sessions')
-    @patch('database.get_sessions')
-    def test_pick_session_user_enters_uppercase_n(self, mock_get_sessions, mock_print, mock_prompt):
-        """Test that pick_session handles uppercase 'N' correctly."""
-        # Arrange
-        mock_sessions = [
-            {"_id": ObjectId(), "created_at": datetime.now(), "messages": []}
-        ]
-        mock_get_sessions.return_value = mock_sessions
-        mock_prompt.return_value = "N"
-        
-        # Act
-        result = pick_session("Lyra")
-        
-        # Assert
-        # The input is converted to lowercase, so "N" should be treated as "n"
-        assert result is None
-
-    @patch('database.prompt_input')
-    @patch('database.print_sessions')
-    @patch('database.get_sessions')
-    def test_pick_session_user_input_trimmed(self, mock_get_sessions, mock_print, mock_prompt):
-        """Test that pick_session trims whitespace from user input."""
-        # Arrange
-        mock_sessions = [
-            {"_id": ObjectId(), "created_at": datetime.now(), "messages": []}
-        ]
-        mock_get_sessions.return_value = mock_sessions
-        mock_prompt.return_value = "  n  "
+        mock_get_sessions.return_value = [{"_id": "1", "created_at": datetime.now(), "messages": []}]
+        mock_prompt_input.side_effect = KeyboardInterrupt
         
         # Act
         result = pick_session("Lyra")
         
         # Assert
         assert result is None
+        mock_print.assert_any_call("\nInput cancelled.")
 
+    @patch('builtins.print')
     @patch('database.prompt_input')
     @patch('database.print_sessions')
     @patch('database.get_sessions')
-    def test_pick_session_selects_first_session(self, mock_get_sessions, mock_print, mock_prompt):
-        """Test that pick_session correctly selects first session."""
+    def test_pick_session_eof_error(self, mock_get_sessions, mock_print_sessions, mock_prompt_input, mock_print):
+        """Test that EOFError returns None and prints cancellation message."""
         # Arrange
-        mock_sessions = [
-            {"_id": ObjectId(), "created_at": datetime.now(), "messages": [{"role": "user", "content": "First"}]},
-            {"_id": ObjectId(), "created_at": datetime.now(), "messages": [{"role": "user", "content": "Second"}]}
-        ]
-        mock_get_sessions.return_value = mock_sessions
-        mock_prompt.return_value = "1"
+        mock_get_sessions.return_value = [{"_id": "1", "created_at": datetime.now(), "messages": []}]
+        mock_prompt_input.side_effect = EOFError
         
         # Act
         result = pick_session("Lyra")
         
         # Assert
-        assert result == mock_sessions[0]
+        assert result is None
+        mock_print.assert_any_call("\nInput cancelled.")
 
-    @patch('database.prompt_input')
-    @patch('database.print_sessions')
-    @patch('database.get_sessions')
-    def test_pick_session_selects_last_session(self, mock_get_sessions, mock_print, mock_prompt):
-        """Test that pick_session correctly selects last session."""
-        # Arrange
-        mock_sessions = [
-            {"_id": ObjectId(), "created_at": datetime.now(), "messages": [{"role": "user", "content": "First"}]},
-            {"_id": ObjectId(), "created_at": datetime.now(), "messages": [{"role": "user", "content": "Second"}]},
-            {"_id": ObjectId(), "created_at": datetime.now(), "messages": [{"role": "user", "content": "Third"}]}
-        ]
-        mock_get_sessions.return_value = mock_sessions
-        mock_prompt.return_value = "3"
-        
-        # Act
-        result = pick_session("Lyra")
-        
-        # Assert
-        assert result == mock_sessions[2]
+
+

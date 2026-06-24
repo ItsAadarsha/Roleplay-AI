@@ -6,7 +6,7 @@ from config import AISUITE_MODEL, PROVIDER, API_KEY
 def get_client():
     provider_configs = {}
     if PROVIDER == "ollama":
-        provider_configs["ollama"] = {"base_url": "http://localhost:11434/api"}
+        provider_configs["ollama"] = {"api_url": "http://localhost:11434/api"}
     elif PROVIDER == "deepseek":
         provider_configs["openai"] = {
             "api_key": API_KEY,

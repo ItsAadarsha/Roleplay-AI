@@ -12,7 +12,7 @@ def load_session(persona, system_message):
         # (skip system and summary messages that were stored from previous trims)
         messages = [system_message] + [
             msg for msg in existing_session["messages"]
-            if not msg["role"] == "system" and not msg.get("is_summary")
+            if not msg["role"] == "system"
         ]
         print(f"Resuming session from {existing_session['created_at'].strftime('%Y-%m-%d %H:%M')}.\n")
 
