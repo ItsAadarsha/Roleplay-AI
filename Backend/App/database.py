@@ -43,7 +43,7 @@ conn.commit()
 
 
 def get_sessions(persona_name):
-    
+    cursor = conn.cursor()
     cursor.execute("""
         SELECT id, persona, created_at, updated_at
         FROM sessions
@@ -64,6 +64,7 @@ def get_sessions(persona_name):
 
 
 def get_session_by_index(persona_name, index: int):
+    cursor = conn.cursor()
     cursor.execute("""
         SELECT id, persona, created_at, updated_at
         FROM sessions
@@ -86,6 +87,7 @@ def get_session_by_index(persona_name, index: int):
 
 
 def load_session(persona, system_message, session=None):
+    cursor = conn.cursor()
 
     if session:
         session_id = session["id"]
@@ -127,6 +129,7 @@ def load_session(persona, system_message, session=None):
 
 
 def save_session(persona_name, messages, session_id=None):
+    cursor = conn.cursor()
     if not messages:
         return None
 

@@ -1,7 +1,8 @@
 # Manages persona selection and creation
-from database import cursor, conn
+from database import conn
 from config import textPrompt
 
+cursor = conn.cursor()
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS personalities (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -18,7 +19,7 @@ conn.commit()
 
 
 def get_personalities():
-    
+    cursor = conn.cursor()
     cursor.execute("""
         SELECT key, name, system, scenario, opening_prompt
         FROM personalities
@@ -38,7 +39,7 @@ def get_personalities():
 
 
 def create_personality(name: str, system: str, scenario: str, opening_prompt: str):
-    
+    cursor = conn.cursor()
     personalities = get_personalities()
     keys = [int(p["key"]) for p in personalities.values()]
     next_key = str(max(keys) + 1) if keys else "1"  # auto-increment key
