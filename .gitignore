@@ -31,9 +31,5 @@ Thumbs.db
 # Project files
 todo.txt
 
-chatbot.db
-Backend/data/chatbot.db
-Backend/App/chatbot.db
 
-Backend/data/images/*
 
