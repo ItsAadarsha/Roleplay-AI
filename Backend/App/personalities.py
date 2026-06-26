@@ -41,7 +41,12 @@ def get_personalities():
 def create_personality(name: str, system: str, scenario: str, opening_prompt: str):
     cursor = conn.cursor()
     personalities = get_personalities()
-    keys = [int(p["key"]) for p in personalities.values()]
+    keys = []
+    for persona in personalities.values():
+        key = persona.get("key")
+        if isinstance(key, str) and key.isdigit():
+            keys.append(int(key))
+
     next_key = str(max(keys) + 1) if keys else "1"  # auto-increment key
 
     new_persona = {

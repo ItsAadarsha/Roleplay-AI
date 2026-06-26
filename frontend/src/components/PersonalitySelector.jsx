@@ -43,7 +43,7 @@ function PersonalitySelector({ onPersonaSelected }) {
       onPersonaSelected(newPersona);
     } catch (error) {
       console.error('Failed to create personality:', error);
-      alert('Failed to create personality');
+      alert(`Failed to create personality: ${error.message}`);
     }
     setLoading(false);
   };

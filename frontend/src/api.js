@@ -1,10 +1,28 @@
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+async function handleResponse(res) {
+  const text = await res.text();
+  let payload = null;
+
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch (err) {
+    payload = null;
+  }
+
+  if (!res.ok) {
+    const message = payload?.detail || payload?.message || text || res.statusText;
+    throw new Error(message || 'Request failed');
+  }
+
+  return payload;
+}
+
 export const api = {
   // Personalities
   async getPersonalities() {
     const res = await fetch(`${API_BASE}/personalities`);
-    return res.json();
+    return handleResponse(res);
   },
 
   async createPersonality(data) {
@@ -13,7 +31,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    return res.json();
+    return handleResponse(res);
   },
 
   async pickPersonality(choice) {
