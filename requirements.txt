@@ -1,6 +1,9 @@
 aisuite
-dotenv
+python-dotenv
 pymongo
+fastapi
+uvicorn
+aiofiles
+python-multipart
 pytest
 pytest-mock
-python-multipart

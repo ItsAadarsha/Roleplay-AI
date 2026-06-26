@@ -2,5 +2,8 @@
   "scripts": {
     "backend": "cd backend/app && python main.py",
     "frontend": "cd frontend && npm run dev"
+  },
+  "dependencies": {
+    "line-clamp": "^1.0.0"
   }
 }
