@@ -10,6 +10,7 @@ function Chat({ persona, session, onBack }) {
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null);
 
   useEffect(() => {
     initializeChat();
@@ -53,7 +54,6 @@ function Chat({ persona, session, onBack }) {
         sessionId,
         userInput
       );
-
       setMessages(data.messages);
       setFullMessages(data.full_messages);
     } catch (error) {
@@ -62,6 +62,9 @@ function Chat({ persona, session, onBack }) {
     }
 
     setLoading(false);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
   };
 
   const handleSaveSession = async () => {
@@ -69,7 +72,6 @@ function Chat({ persona, session, onBack }) {
       alert('No messages to save');
       return;
     }
-
     setLoading(true);
     try {
       const data = await api.saveSession(persona.key, fullMessages, sessionId);
@@ -80,6 +82,20 @@ function Chat({ persona, session, onBack }) {
       alert('Failed to save session');
     }
     setLoading(false);
+  };
+
+  const handleInputChange = (e) => {
+    setInput(e.target.value);
+    const textarea = e.target;
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(e);
+    }
   };
 
   if (initializing) {
@@ -94,59 +110,62 @@ function Chat({ persona, session, onBack }) {
     <div className="chat">
       <div className="chat-header">
         <button className="btn-back" onClick={onBack}>
-          ← BACK TO SESSIONS
+          ← Back
         </button>
         <div className="chat-info">
-          <h1>{persona.name}</h1>
-          <p>Session ID: {sessionId || 'New Session'}</p>
+          <span className="persona-name">{persona.name}</span>
+          <span className="session-id">Session #{sessionId || 'New'}</span>
         </div>
-        <button 
-          className="btn-save" 
+        <button
+          className="btn-save"
           onClick={handleSaveSession}
           disabled={loading || fullMessages.length === 0}
         >
-          SAVE SESSION
+          Save
         </button>
       </div>
 
       <div className="chat-messages">
         {messages.map((msg, index) => {
           if (msg.role === 'system') return null;
-          
+          const roleClass = msg.role === 'user' ? 'user' : 'assistant';
+          const roleLabel = msg.role === 'user' ? 'You' : persona.name;
+
           return (
-            <div 
-              key={index} 
-              className={`message message-${msg.role}`}
-            >
-              <div className="message-role">
-                {msg.role === 'user' ? '> USER' : `> ${persona.name.toUpperCase()}`}
+            <div key={index} className={`message ${roleClass}`}>
+              <div className="message-header">
+                <span className="message-role">{roleLabel}</span>
               </div>
               <div className="message-content">{msg.content}</div>
             </div>
           );
         })}
-        
+
         {loading && (
-          <div className="message message-assistant">
-            <div className="message-role">{`> ${persona.name.toUpperCase()}`}</div>
-            <div className="message-content">...</div>
+          <div className="message assistant">
+            <div className="message-header">
+              <span className="message-role">{persona.name}</span>
+            </div>
+            <div className="message-content typing-indicator">…</div>
           </div>
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
 
       <form className="chat-input-form" onSubmit={handleSendMessage}>
-        <input
-          type="text"
+        <textarea
+          ref={textareaRef}
+          rows={1}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your message..."
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          placeholder="Type your message… (Shift+Enter for new line)"
           disabled={loading}
           autoFocus
         />
         <button type="submit" disabled={loading || !input.trim()}>
-          SEND
+          Send
         </button>
       </form>
     </div>

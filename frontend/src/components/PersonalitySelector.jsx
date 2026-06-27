@@ -6,6 +6,7 @@ import './PersonalitySelector.css';
 
 function PersonalitySelector({ onPersonaSelected }) {
   const [personalities, setPersonalities] = useState({});
+  const [selectedKey, setSelectedKey] = useState(null);
   const [editingPersonaKey, setEditingPersonaKey] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [modalInitialData, setModalInitialData] = useState(null);
@@ -32,16 +33,27 @@ function PersonalitySelector({ onPersonaSelected }) {
     try {
       const data = await api.getPersonalities();
       setPersonalities(data);
+      // Auto-select first if any
+      const keys = Object.keys(data);
+      if (keys.length > 0 && !selectedKey) {
+        setSelectedKey(keys[0]);
+      }
     } catch (error) {
       console.error('Failed to load personalities:', error);
-      setError('Unable to load personalities. Confirm the backend is running on localhost:8000.');
+      setError('Unable to load personalities. Confirm the backend is running.');
       setPersonalities({});
     }
     setLoading(false);
   };
 
-  const handlePersonaClick = (persona) => {
-    onPersonaSelected(persona);
+  const handleSelectPersona = (key) => {
+    setSelectedKey(key);
+  };
+
+  const handleStartChat = () => {
+    if (!selectedKey) return;
+    const persona = personalities[selectedKey];
+    if (persona) onPersonaSelected(persona);
   };
 
   const handleSavePersona = async (data) => {
@@ -49,9 +61,11 @@ function PersonalitySelector({ onPersonaSelected }) {
     setError('');
     setToast('');
     try {
-      const savedPersona = editingPersonaKey
-        ? await api.updatePersonality(editingPersonaKey, data)
-        : await api.createPersonality(data);
+      if (editingPersonaKey) {
+        await api.updatePersonality(editingPersonaKey, data);
+      } else {
+        await api.createPersonality(data);
+      }
       await loadPersonalities();
       setEditModalOpen(false);
       setEditingPersonaKey(null);
@@ -88,6 +102,11 @@ function PersonalitySelector({ onPersonaSelected }) {
       await api.deletePersonality(confirmTarget.key);
       setToast(`Deleted ${confirmTarget.name}`);
       await loadPersonalities();
+      // If deleted was selected, clear selection
+      if (selectedKey === confirmTarget.key) {
+        const keys = Object.keys(personalities);
+        setSelectedKey(keys.length > 0 ? keys[0] : null);
+      }
     } catch (error) {
       console.error('Failed to delete personality:', error);
       setError(`Failed to delete personality: ${error.message}`);
@@ -103,105 +122,147 @@ function PersonalitySelector({ onPersonaSelected }) {
     setModalInitialData(null);
   };
 
-  const personalityList = Object.values(personalities);
-  const filteredPersonalities = personalityList.filter((persona) => {
+  const filteredKeys = Object.keys(personalities).filter((key) => {
+    const p = personalities[key];
     const search = query.toLowerCase();
     return (
-      persona.name.toLowerCase().includes(search) ||
-      String(persona.key).includes(search) ||
-      (persona.description || '').toLowerCase().includes(search)
+      p.name.toLowerCase().includes(search) ||
+      key.toLowerCase().includes(search) ||
+      (p.description || '').toLowerCase().includes(search)
     );
   });
 
+  const selectedPersona = selectedKey ? personalities[selectedKey] : null;
+
   return (
-    <div className="personality-selector">
-      <h1>SELECT PERSONALITY</h1>
+    <div className="dashboard">
+      {/* Error / Toast */}
+      {error && <div className="dashboard-error">{error}</div>}
+      {toast && <div className="dashboard-toast">{toast}</div>}
 
-      {error && (
-        <div className="error-message">
-          <p>{error}</p>
-          <button type="button" className="btn-retry" onClick={loadPersonalities} disabled={loading}>
-            Retry
-          </button>
-        </div>
-      )}
-      {toast && <div className="toast">{toast}</div>}
-      {loading && <p>Loading...</p>}
-
-      <div className="personality-controls">
-        <input
-          placeholder="Search by name, key, or description"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <button
-          className="btn-create"
-          type="button"
-          onClick={() => {
-            setEditingPersonaKey(null);
-            setModalInitialData(null);
-            setEditModalOpen(true);
-          }}
-          disabled={loading}
-        >
-          + CREATE NEW PERSONALITY
-        </button>
-      </div>
-
-      <div className="personality-list personality-card-grid">
-        {filteredPersonalities.length === 0 && !loading && (
-          <p className="empty-state">No personalities found. Create one to get started.</p>
-        )}
-
-        {filteredPersonalities.map((persona) => (
-          <div key={persona.key} className="persona-card">
-            <div className="persona-card-top">
-              <div className="persona-avatar-wrap" onClick={() => handlePersonaClick(persona)}>
-                {persona.avatar ? (
-                  <img src={getImageUrl(persona.avatar)} alt={persona.name} className="persona-avatar" />
-                ) : (
-                  <div className="persona-avatar-fallback">{(persona.name || 'P').charAt(0)}</div>
-                )}
-              </div>
-              <div className="persona-card-meta" onClick={() => handlePersonaClick(persona)}>
-                <div className="persona-card-name">{persona.name}</div>
-                <div className="persona-card-key">{persona.key ? `#${persona.key}` : 'untagged'}</div>
-              </div>
-            </div>
-
-            {persona.description && <div className="persona-card-description">{persona.description}</div>}
-
-            <div className="persona-card-bottom">
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => handlePersonaClick(persona)}
-              >
-                Open persona
-              </button>
-              <div className="persona-card-actions">
-                <button
-                  type="button"
-                  className="btn-icon"
-                  onClick={(e) => handleEditPersona(e, persona)}
-                  disabled={loading}
-                  title="Edit personality"
-                >
-                  ✎
-                </button>
-                <button
-                  type="button"
-                  className="btn-icon btn-delete"
-                  onClick={(e) => handleDeletePersona(e, persona)}
-                  disabled={loading}
-                  title="Delete personality"
-                >
-                  🗑
-                </button>
-              </div>
-            </div>
+      <div className="dashboard-layout">
+        {/* Sidebar */}
+        <aside className="sidebar">
+          <div className="sidebar-header">
+            <h2>Personalities</h2>
+            <button
+              className="btn-icon-only"
+              onClick={() => {
+                setEditingPersonaKey(null);
+                setModalInitialData(null);
+                setEditModalOpen(true);
+              }}
+              disabled={loading}
+              title="Create new"
+            >
+              +
+            </button>
           </div>
-        ))}
+          <div className="sidebar-search">
+            <input
+              type="text"
+              placeholder="Search…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+          <div className="sidebar-list">
+            {loading && <p className="loading-text">Loading…</p>}
+            {!loading && filteredKeys.length === 0 && (
+              <p className="empty-text">No personalities found.</p>
+            )}
+            {filteredKeys.map((key) => {
+              const p = personalities[key];
+              const isActive = selectedKey === key;
+              return (
+                <div
+                  key={key}
+                  className={`sidebar-item ${isActive ? 'active' : ''}`}
+                  onClick={() => handleSelectPersona(key)}
+                >
+                  <div className="sidebar-avatar">
+                    {p.avatar ? (
+                      <img src={getImageUrl(p.avatar)} alt={p.name} />
+                    ) : (
+                      <span>{p.name.charAt(0)}</span>
+                    )}
+                  </div>
+                  <div className="sidebar-info">
+                    <div className="sidebar-name">{p.name}</div>
+                    <div className="sidebar-key">#{key}</div>
+                  </div>
+                  <div className="sidebar-actions">
+                    <button
+                      className="btn-icon-small"
+                      onClick={(e) => handleEditPersona(e, p)}
+                      title="Edit"
+                    >
+                      ✎
+                    </button>
+                    <button
+                      className="btn-icon-small btn-delete"
+                      onClick={(e) => handleDeletePersona(e, p)}
+                      title="Delete"
+                    >
+                      🗑
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </aside>
+
+        {/* Main content */}
+        <main className="main-content">
+          {selectedPersona ? (
+            <div className="persona-detail">
+              <div className="detail-header">
+                <div className="detail-avatar-large">
+                  {selectedPersona.avatar ? (
+                    <img src={getImageUrl(selectedPersona.avatar)} alt={selectedPersona.name} />
+                  ) : (
+                    <span>{selectedPersona.name.charAt(0)}</span>
+                  )}
+                </div>
+                <div className="detail-info">
+                  <h1>{selectedPersona.name}</h1>
+                  <p className="detail-description">{selectedPersona.description || 'No description'}</p>
+                  <div className="detail-meta">
+                    <span>Key: #{selectedPersona.key}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="detail-actions">
+                <button className="btn-primary btn-start" onClick={handleStartChat}>
+                  ▶ Start Chat
+                </button>
+                <button
+                  className="btn-secondary"
+                  onClick={() => {
+                    setEditingPersonaKey(selectedPersona.key);
+                    setModalInitialData(selectedPersona);
+                    setEditModalOpen(true);
+                  }}
+                >
+                  Edit
+                </button>
+              </div>
+
+              {/* Future: list recent sessions here */}
+              <div className="detail-sessions">
+                <h3>Recent Sessions</h3>
+                <p className="hint">Sessions will appear here after you chat.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="empty-detail">
+              <h2>Select a personality</h2>
+              <p>Choose from the sidebar to see details and start chatting.</p>
+            </div>
+          )}
+        </main>
       </div>
 
       <EditModal
@@ -211,7 +272,6 @@ function PersonalitySelector({ onPersonaSelected }) {
         onCancel={handleCancelEdit}
         saving={loading}
       />
-
       <ConfirmModal
         open={confirmOpen}
         title="Delete Persona"

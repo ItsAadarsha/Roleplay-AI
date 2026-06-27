@@ -43,6 +43,27 @@ function SessionSelector({ persona, onSessionSelected, onBack }) {
     }
   };
 
+  // NEW: group sessions by date (Today, Yesterday, Older)
+  const getDateGroup = (dateStr) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) return 'Today';
+    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    return 'Older';
+  };
+
+  const grouped = sessions.reduce((acc, session) => {
+    const group = getDateGroup(session.updated_at || session.created_at);
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(session);
+    return acc;
+  }, {});
+
+  const sortedGroups = ['Today', 'Yesterday', 'Older'].filter(g => grouped[g]);
+
   return (
     <div className="session-selector">
       <button className="btn-back" onClick={onBack}>
@@ -63,30 +84,32 @@ function SessionSelector({ persona, onSessionSelected, onBack }) {
           <div className="session-info">Start a new conversation</div>
         </div>
 
-        {sessions.map((session, index) => (
-          <div 
-            key={session.id} 
-            className="session-item"
-            onClick={() => handleSessionClick(session, index + 1)}
-          >
-            <div className="session-label">[{index + 1}]</div>
-            <div className="session-info">
-              <div>Session ID: {session.id}</div>
-              <div className="session-date">
-                Created: {new Date(session.created_at).toLocaleString()}
+        {sortedGroups.map((groupName) => (
+          <div key={groupName}>
+            <div className="session-group-header">{groupName}</div>
+            {grouped[groupName].map((session, index) => (
+              <div 
+                key={session.id} 
+                className="session-item"
+                onClick={() => handleSessionClick(session, index + 1)}
+              >
+                <div className="session-label">[{index + 1}]</div>
+                <div className="session-info">
+                  <div className="session-id">Session ID: {session.id}</div>
+                  <div className="session-date">
+                    Updated: {new Date(session.updated_at).toLocaleString()}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="session-action-btn"
+                  onClick={(e) => handleDeleteSession(e, session)}
+                  title={`Delete session ${session.id}`}
+                >
+                  Delete
+                </button>
               </div>
-              <div className="session-date">
-                Updated: {new Date(session.updated_at).toLocaleString()}
-              </div>
-            </div>
-            <button
-              type="button"
-              className="session-action-btn"
-              onClick={(e) => handleDeleteSession(e, session)}
-              title={`Delete session ${session.id}`}
-            >
-              Delete
-            </button>
+            ))}
           </div>
         ))}
 
