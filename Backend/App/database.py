@@ -42,8 +42,15 @@ CREATE TABLE IF NOT EXISTS messages (
 conn.commit()
 
 
+def info(message):
+    print(message)
+
+
+def success(message):
+    print(message)
+
+
 def get_sessions(persona_name):
-    cursor = conn.cursor()
     cursor.execute("""
         SELECT id, persona, created_at, updated_at
         FROM sessions
@@ -64,7 +71,6 @@ def get_sessions(persona_name):
 
 
 def get_session_by_index(persona_name, index: int):
-    cursor = conn.cursor()
     cursor.execute("""
         SELECT id, persona, created_at, updated_at
         FROM sessions
@@ -87,8 +93,6 @@ def get_session_by_index(persona_name, index: int):
 
 
 def load_session(persona, system_message, session=None):
-    cursor = conn.cursor()
-
     if session:
         session_id = session["id"]
 
@@ -129,8 +133,8 @@ def load_session(persona, system_message, session=None):
 
 
 def save_session(persona_name, messages, session_id=None):
-    cursor = conn.cursor()
     if not messages:
+        info("No messages to save.")
         return None
 
     now = datetime.now().isoformat()
@@ -155,3 +159,50 @@ def save_session(persona_name, messages, session_id=None):
 
     conn.commit()
     return session_id
+
+
+def delete_session(session_id):
+    if not session_id:
+        return False
+
+    cursor.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+    cursor.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+    conn.commit()
+    return True
+
+
+def prompt_input(prompt):
+    return input(prompt)
+
+
+def print_sessions(sessions):
+    if not sessions:
+        print("No previous sessions found.")
+        return
+
+    print("Previous sessions:")
+    for index, session in enumerate(sessions, start=1):
+        print(f"{index}. Session {session['id']} ({session['updated_at']})")
+
+
+def pick_session(persona_name):
+    sessions = get_sessions(persona_name)
+    if not sessions:
+        return None
+
+    print_sessions(sessions)
+    choice = prompt_input("Choose session (or N for new): ").strip().lower()
+
+    if choice in {"", "n"}:
+        return None
+    if choice == "exit":
+        raise SystemExit(0)
+
+    try:
+        index = int(choice)
+    except ValueError:
+        return None
+
+    if 1 <= index <= len(sessions):
+        return sessions[index - 1]
+    return None

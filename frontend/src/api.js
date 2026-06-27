@@ -131,6 +131,13 @@ export const api = {
     return handleResponse(res);
   },
 
+  async deleteSession(personaName, sessionId) {
+    const res = await fetch(`${API_BASE}/sessions/${encodeURIComponent(personaName)}/${sessionId}`, {
+      method: 'DELETE'
+    });
+    return handleResponse(res);
+  },
+
   // Chat
   async sendMessage(personaKey, messages, fullMessages, sessionId, userInput) {
     const res = await fetch(`${API_BASE}/chat`, {

@@ -29,6 +29,20 @@ function SessionSelector({ persona, onSessionSelected, onBack }) {
     onSessionSelected(null);
   };
 
+  const handleDeleteSession = async (e, session) => {
+    e.stopPropagation();
+    if (!window.confirm(`Delete session ${session.id}?`)) {
+      return;
+    }
+
+    try {
+      await api.deleteSession(persona.name, session.id);
+      await loadSessions();
+    } catch (error) {
+      console.error('Failed to delete session:', error);
+    }
+  };
+
   return (
     <div className="session-selector">
       <button className="btn-back" onClick={onBack}>
@@ -65,6 +79,14 @@ function SessionSelector({ persona, onSessionSelected, onBack }) {
                 Updated: {new Date(session.updated_at).toLocaleString()}
               </div>
             </div>
+            <button
+              type="button"
+              className="session-action-btn"
+              onClick={(e) => handleDeleteSession(e, session)}
+              title={`Delete session ${session.id}`}
+            >
+              Delete
+            </button>
           </div>
         ))}
 

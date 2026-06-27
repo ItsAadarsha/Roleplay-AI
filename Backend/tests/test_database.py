@@ -2,7 +2,7 @@
 import pytest
 from datetime import datetime
 from unittest.mock import Mock, patch, MagicMock, call
-from database import save_session, get_sessions, pick_session
+from database import save_session, get_sessions, pick_session, delete_session
 
 
 class TestSaveSession:
@@ -284,6 +284,32 @@ class TestSaveSession:
             if "INSERT INTO messages" in c[0][0]
         ]
         assert len(msg_inserts) == 100
+
+
+class TestDeleteSession:
+    """Test suite for delete_session() function."""
+
+    @patch('database.conn')
+    @patch('database.cursor')
+    def test_delete_session_removes_session_and_messages(self, mock_cursor, mock_conn):
+        """Test that deleting a session removes its messages and the session itself."""
+        session_id = 7
+
+        result = delete_session(session_id)
+
+        delete_messages_call = next(
+            c for c in mock_cursor.execute.call_args_list
+            if "DELETE FROM messages" in c[0][0]
+        )
+        delete_session_call = next(
+            c for c in mock_cursor.execute.call_args_list
+            if "DELETE FROM sessions" in c[0][0]
+        )
+
+        assert result is True
+        assert delete_messages_call[0][1] == (session_id,)
+        assert delete_session_call[0][1] == (session_id,)
+        mock_conn.commit.assert_called_once()
 
 
 class TestGetSessions:

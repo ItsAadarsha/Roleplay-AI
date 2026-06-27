@@ -16,7 +16,7 @@ from personalities import (
     delete_personality,
     pick_personality,
 )
-from database import save_session, load_session, get_session_by_index, get_sessions, DATA_DIR 
+from database import save_session, load_session, get_session_by_index, get_sessions, delete_session, DATA_DIR 
 from response import get_response
 from memory import trim_memory
 from config import textPrompt
@@ -156,6 +156,14 @@ def list_sessions(persona_name: str):
     if not sessions:
         return {"sessions": [], "message": "No previous sessions found."}
     return {"sessions": sessions}
+
+
+@app.delete("/sessions/{persona_name}/{session_id}")
+def delete_session_endpoint(persona_name: str, session_id: int):
+    deleted = delete_session(session_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Session not found.")
+    return {"deleted": True}
 
 
 class PickSessionRequest(BaseModel):
