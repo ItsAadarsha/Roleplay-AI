@@ -42,7 +42,7 @@ function PersonalitySelector({ onPersonaSelected }) {
   };
 
   const handlePersonaClick = (persona) => {
-    onPersonaSelected(persona);
+    onPersonaSelected(persona); // pass whole object, not just key
   };
 
   const handleSavePersona = async (data) => {

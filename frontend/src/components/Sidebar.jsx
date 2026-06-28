@@ -1,10 +1,19 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+import { api, getImageUrl } from '../api';
 
 function Sidebar({ activeView, onViewChange, onCreateClick }) {
-  const [width, setWidth] = useState(224); // 224px = w-56
+  const [width, setWidth] = useState(224);
+  const [recentSessions, setRecentSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    api.getRecentSessions()
+      .then(data => setRecentSessions(data.sessions))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleMouseDown = useCallback((e) => {
     e.preventDefault();
@@ -26,22 +35,33 @@ function Sidebar({ activeView, onViewChange, onCreateClick }) {
   }, [width]);
 
   const items = [
-    { key: 'create', label: 'Create', icon: <span class="material-symbols-outlined">add</span> },
-    { key: 'discover', label: 'Discover', icon: <span class="material-symbols-outlined">explore</span> },
-    { key: 'feed', label: 'Feed', icon: <span class="material-symbols-outlined">rss_feed</span> },
+    { key: 'create', label: 'Create', icon: <span className="material-symbols-outlined">add</span> },
+    { key: 'discover', label: 'Discover', icon: <span className="material-symbols-outlined">explore</span> },
+    { key: 'feed', label: 'Feed', icon: <span className="material-symbols-outlined">rss_feed</span> },
   ];
+
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  };
 
   return (
     <aside
       style={{ width: `${width}px` }}
       className="relative flex shrink-0 flex-col border-r border-border/70 bg-surface/80 px-0 py-5 backdrop-blur-xl"
     >
-      <div 
-      onClick={() => navigate('/')}
-      className="px-10 pb-6 text-xl text-center font-semibold tracking-tight text-text cursor-pointer hover:text-accent transition">
-        <span className="bg-accent bg-clip-text text-transparent"> SARP</span>
+      <div
+        onClick={() => navigate('/')}
+        className="px-10 pb-6 text-xl text-center font-semibold tracking-tight text-text cursor-pointer hover:text-accent transition"
+      >
+        <span className="bg-accent bg-clip-text text-transparent">SARP</span>
       </div>
-      <nav className="flex flex-1 flex-col gap-1 px-3">
+
+      <nav className="flex flex-col gap-1 px-3">
         {items.map((item) => {
           const isActive = activeView === item.key;
           return (
@@ -56,6 +76,53 @@ function Sidebar({ activeView, onViewChange, onCreateClick }) {
           );
         })}
       </nav>
+
+      {/* Recent Sessions */}
+      <div className="mt-4 flex flex-col gap-1 px-3 overflow-y-auto flex-1">
+        <p className="px-3 py-1 text-xs font-semibold uppercase tracking-widest text-muted/60">
+          Recent
+        </p>
+
+        {loading ? (
+          <p className="px-3 text-xs text-muted/50">Loading...</p>
+        ) : recentSessions.length === 0 ? (
+          <p className="px-3 text-xs text-muted/50">No recent sessions.</p>
+        ) : (
+          recentSessions.map((session) => (
+            <button
+                key={session.id}
+                onClick={() => navigate(`/chat/${session.id}`)}
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition hover:bg-white/5"
+            >
+                {/* Avatar */}
+                <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-accent2 to-accent">
+                    {session.persona_avatar ? (
+                        <img src={getImageUrl(session.persona_avatar)} alt={session.persona_name} className="h-full w-full object-cover" />
+                    ) : (
+                        <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-950">
+                            {session.persona_name?.charAt(0)}
+                        </div>
+                    )}
+                </div>
+
+                {/* Text */}
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-medium text-text">
+                            {session.persona_name}
+                        </span>
+                        <span className="shrink-0 text-xs text-muted/50">
+                            {formatDate(session.updated_at)}
+                        </span>
+                    </div>
+                    <span className="truncate text-xs text-muted/60">
+                        {session.last_user_message ?? 'No messages yet'}
+                    </span>
+                </div>
+            </button>
+        ))
+        )}
+      </div>
 
       {/* Drag handle */}
       <div

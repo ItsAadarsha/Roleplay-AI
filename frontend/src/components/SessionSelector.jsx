@@ -9,14 +9,14 @@ function SessionSelector({ persona, onSessionSelected, onBack }) {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    if (!persona?.name && personaKey) return;
+    if (!persona?.key) return;
     loadSessions();
   }, [persona, personaKey]);
 
   const loadSessions = async () => {
     setLoading(true);
     try {
-      const data = await api.getSessions(persona.name);
+      const data = await api.getSessions(persona.key);
       setSessions(data.sessions || []);
     } catch (error) {
       console.error('Failed to load sessions:', error);
@@ -31,7 +31,7 @@ function SessionSelector({ persona, onSessionSelected, onBack }) {
     e.stopPropagation();
     if (!window.confirm(`Delete session ${session.id}?`)) return;
     try {
-      await api.deleteSession(persona.name, session.id);
+      await api.deleteSession(persona.key, session.id);
       await loadSessions();
     } catch (error) {
       console.error('Failed to delete session:', error);

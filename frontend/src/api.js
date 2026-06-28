@@ -89,50 +89,59 @@ export const api = {
   },
 
   // Sessions
-  async getSessions(personaName) {
-    const res = await fetch(`${API_BASE}/sessions/${encodeURIComponent(personaName)}`);
+  async getRecentSessions() {
+    const res = await fetch(`${API_BASE}/sessions/recent`);
     return handleResponse(res);
   },
 
-  async pickSession(personaName, index) {
+  async getSessions(personaName, personaId) {
+    const qs = personaId ? `?persona_id=${encodeURIComponent(personaId)}` : '';
+    const res = await fetch(`${API_BASE}/sessions/${encodeURIComponent(personaName)}${qs}`);
+    return handleResponse(res);
+  },
+
+  async pickSession(personaName, personaId, index) {
     const res = await fetch(`${API_BASE}/sessions/pick`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
-        persona_name: personaName, 
+        persona_name: personaName,
+        persona_id: personaId,
         index 
       })
     });
     return handleResponse(res);
   },
 
-  async loadSession(personaKey, session) {
+  async loadSession(personaKey, personaName, personaId, session) {
     const res = await fetch(`${API_BASE}/sessions/load`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
-        persona_key: personaKey, 
+        persona_key: personaKey,
+        persona_name: personaName,
+        persona_id: personaId,
         session 
       })
     });
     return handleResponse(res);
   },
 
-  async saveSession(personaKey, messages, context, sessionId) {
+ async saveSession(personaKey, messages, context, sessionId) {
     const res = await fetch(`${API_BASE}/sessions/save`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        persona_key: personaKey,
-        messages: messages,
-        context: context,
-        session_id: sessionId
-      })
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            persona_key: personaKey,
+            messages,
+            context,
+            session_id: sessionId
+        })
     });
     return handleResponse(res);
-  },
+},
 
-  async deleteSession(personaName, sessionId) {
+  async deleteSession(personaName, personaId, sessionId) {
     const res = await fetch(`${API_BASE}/sessions/${encodeURIComponent(personaName)}/${sessionId}`, {
       method: 'DELETE'
     });

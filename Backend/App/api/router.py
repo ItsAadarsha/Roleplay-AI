@@ -17,7 +17,7 @@ from personalities import (
     delete_personality,
     pick_personality,
 )
-from database import save_session, load_session, get_session_by_index, get_sessions, delete_session, DATA_DIR, init_db, get_db 
+from database import save_session, load_session, get_session_by_index, get_recent_sessions, get_sessions, delete_session, DATA_DIR, init_db, get_db 
 from response import get_response
 from personalities import init_personalities_db
 from memory import trim_memory
@@ -144,32 +144,41 @@ def delete_persona(persona_key: str):
         raise HTTPException(status_code=404, detail="Persona not found.")
     return {"deleted": True}
 
+
 class PickPersonaRequest(BaseModel):
-    choice: str
+    persona_key: str
 
 @app.post("/personalities/pick")
 def pick_persona(body: PickPersonaRequest):
-    result = pick_personality(body.choice)
+    result = pick_personality(body.persona_key)
     if result is None:
         raise HTTPException(
             status_code=400,
-            detail="No personalities exist or choice was 'n'. POST /personalities to create one."
+            detail="Personality not found."
         )
     return result
 
 
 #------------------SESSIONS----------------------
-@app.get("/sessions/{persona_name}")
-def list_sessions(persona_name: str, conn: sqlite3.Connection = Depends(db_dependency)):
-    """Get the last 5 sessions for a persona."""
-    sessions = get_sessions(conn, persona_name)
-    if not sessions:
-        return {"sessions": [], "message": "No previous sessions found."}
-    return {"sessions": sessions}
+@app.get("/sessions/recent")
+def list_recent_sessions(conn: sqlite3.Connection = Depends(db_dependency)):
+    rows = get_recent_sessions(conn)
+    return {"sessions": rows}
 
 
-@app.delete("/sessions/{persona_name}/{session_id}")
-def delete_session_endpoint(persona_name: str, session_id: int, conn: sqlite3.Connection = Depends(db_dependency)):
+@app.get("/sessions/{persona_key}")
+def list_sessions(persona_key: str, conn: sqlite3.Connection = Depends(db_dependency)):
+    try:
+        sessions = get_sessions(conn, persona_key)
+        return {"sessions": sessions}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/sessions/{persona_key}/{session_id}")
+def delete_session_endpoint(persona_key: str, session_id: int, conn: sqlite3.Connection = Depends(db_dependency)):
     deleted = delete_session(conn, session_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Session not found.")
@@ -177,7 +186,7 @@ def delete_session_endpoint(persona_name: str, session_id: int, conn: sqlite3.Co
 
 
 class PickSessionRequest(BaseModel):
-    persona_name: str
+    persona_key: str
     index: int | None = None  # None = start new session
 
 @app.post("/sessions/pick")
@@ -186,7 +195,7 @@ def pick_session_endpoint(body: PickSessionRequest, conn: sqlite3.Connection = D
     if body.index is None:
         return {"session": None, "new": True}
 
-    session = get_session_by_index(conn, body.persona_name, body.index - 1)  # 1-based
+    session = get_session_by_index(conn, body.persona_key, body.index - 1)  # 1-based
     if not session:
         return {"session": None, "new": True, "warning": "Index out of range, starting new session."}
 
@@ -194,12 +203,12 @@ def pick_session_endpoint(body: PickSessionRequest, conn: sqlite3.Connection = D
 
 class SessionData(BaseModel):
     id: int
-    persona: str
+    persona_key: str
     created_at: str
     updated_at: str
 
 class LoadSessionRequest(BaseModel):
-    persona_key: str
+    persona_key: str | None = None
     session: SessionData | None = None  # pass null to start fresh
     
 
@@ -210,14 +219,12 @@ def load(body: LoadSessionRequest, conn: sqlite3.Connection = Depends(db_depende
     if not persona:
         raise HTTPException(status_code=404, detail="Persona not found.")
 
-    template = f"{persona.get('system','')}\n\n{textPrompt}\n\nScenario: {persona.get('Scenario','')}"
+    template = f"{persona.get('system','')}\n\n{textPrompt}\n\nScenario: {persona.get('scenario','')}"
     system_message = {"role": "system", "content": template}
 
-    # Convert Pydantic model to dict if session exists
     session_dict = body.session.model_dump() if body.session else None
     context, full_messages = load_session(conn, persona, system_message, session_dict)
-    
-    # Remove id field from messages for clean response
+
     clean_messages = [{k: v for k, v in m.items() if k != "id"} for m in full_messages]
     clean_context = [{k: v for k, v in m.items() if k != "id"} for m in context]
 
@@ -225,7 +232,9 @@ def load(body: LoadSessionRequest, conn: sqlite3.Connection = Depends(db_depende
         "session": session_dict,
         "messages": clean_messages,
         "context": clean_context,
-        "resumed": body.session is not None
+        "resumed": body.session is not None,
+        "persona_name": persona.get("name"),
+        "persona_key": body.persona_key
     }
 
 class Message(BaseModel):
@@ -245,7 +254,13 @@ def save(body: SaveSessionRequest, conn: sqlite3.Connection = Depends(db_depende
     if not persona:
         raise HTTPException(status_code=404, detail="Persona not found.")
 
-    session_id = save_session(conn, persona["name"], body.messages, body.context, body.session_id)
+    session_id = save_session(
+        conn,
+        body.persona_key,
+        messages=body.messages,
+        context=body.context,
+        session_id=body.session_id,
+    )
     if session_id is None:
         raise HTTPException(status_code=400, detail="No messages to save.")
     return {"saved": True, "session_id": session_id}
@@ -268,7 +283,7 @@ def chat(body: ChatRequest):
     if not persona:
         raise HTTPException(status_code=404, detail="Persona not found.")
     
-    template = f"{persona.get('system','')}\n\n{textPrompt}\n\nScenario: {persona.get('Scenario','')}"
+    template = f"{persona.get('system','')}\n\n{textPrompt}\n\nScenario: {persona.get('scenario','')}"
     system_message = {"role": "system", "content": template}
 
     messages = body.messages + [{"role": "user", "content": body.user_input}]

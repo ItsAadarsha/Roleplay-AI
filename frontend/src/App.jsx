@@ -18,7 +18,12 @@ function AppContent() {
   };
 
   const handleSessionSelected = (session) => {
-    const persona = selectedPersona || location.state?.persona;
+    const persona = selectedPersona || routePersona || location.state?.persona;
+    if (!persona?.key) {
+      console.error('No persona selected for session navigation');
+      return;
+    }
+
     setSelectedSession(session);
     const targetPath = session
       ? `/chat/${encodeURIComponent(persona.key)}/${session.id}`
@@ -33,7 +38,8 @@ function AppContent() {
   };
 
   const handleBackToSessions = () => {
-    const persona = selectedPersona || location.state?.persona;
+    const persona = selectedPersona || routePersona || location.state?.persona;
+    if (!persona?.key) return;
     setSelectedSession(null);
     navigate(`/sessions/${encodeURIComponent(persona.key)}`, { state: { persona } });
   };

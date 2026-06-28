@@ -1,6 +1,6 @@
 from database import get_db
 from config import textPrompt
-
+import re
 
 def init_personalities_db():
     with get_db() as conn:
@@ -48,15 +48,26 @@ def get_personalities():
     }
 
 
+def slugify(name: str) -> str:
+    return re.sub(r'[^a-z0-9]+', '_', name.lower()).strip('_')
+
 def create_personality(name, description, system, scenario, opening_prompt, avatar=None):
     with get_db() as conn:
         cursor = conn.cursor()
-        personalities = get_personalities()
-        keys = [int(p["key"]) for p in personalities.values() if isinstance(p.get("key"), str) and p["key"].isdigit()]
-        next_key = str(max(keys) + 1) if keys else "1"
+        
+        base_key = slugify(name)
+        key = base_key
+        suffix = 1
+        # handle duplicate keys
+        while True:
+            cursor.execute("SELECT key FROM personalities WHERE key = ?", (key,))
+            if not cursor.fetchone():
+                break
+            key = f"{base_key}_{suffix}"
+            suffix += 1
 
         new_persona = {
-            "key": next_key,
+            "key": key,
             "name": name,
             "description": description or '',
             "system": system,
@@ -69,10 +80,7 @@ def create_personality(name, description, system, scenario, opening_prompt, avat
             INSERT INTO personalities
             (key, name, description, system, scenario, opening_prompt, avatar)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            next_key, name, description or '', system,
-            scenario, opening_prompt, avatar or ''
-        ))
+        """, (key, name, description or '', system, scenario, opening_prompt, avatar or ''))
 
     return new_persona
 
@@ -108,13 +116,9 @@ def delete_personality(key: str):
         return cursor.rowcount > 0
 
 
-def pick_personality(choice: str):
+def pick_personality(key: str):
     personalities = get_personalities()
-    if not personalities or choice.lower() == "n":
+    if not personalities or not key:
         return None
-
-    normalized = {str(k): v for k, v in personalities.items()}
-    if choice not in normalized:
-        return list(personalities.values())[0]
-
-    return normalized[choice]
+    
+    return personalities.get(key)
