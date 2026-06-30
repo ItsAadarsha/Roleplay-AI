@@ -19,7 +19,6 @@ from personalities import (
 )
 from database import save_session, load_session, get_session_by_index, get_recent_sessions, get_sessions, delete_session, DATA_DIR, init_db, get_db 
 from response import get_response
-from personalities import init_personalities_db
 from memory import trim_memory
 from config import textPrompt
 import os
@@ -46,7 +45,7 @@ os.makedirs(AVATAR_DIR, exist_ok=True)
 app.mount("/data/images", StaticFiles(directory=str(AVATAR_DIR)), name="images")
 
 init_db()
-init_personalities_db()
+
 
 def db_dependency():
     with get_db() as conn:

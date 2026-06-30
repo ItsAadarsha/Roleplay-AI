@@ -20,7 +20,7 @@ class Session(Base):
     __tablename__ = "sessions"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    persona_key = Column(Text, nullable=False)
+    persona_key = Column(Text, ForeignKey("personalities.key", ondelete="CASCADE"), nullable=False)
     persona_id = Column(Text)
     created_at = Column(Text, nullable=False)
     updated_at = Column(Text, nullable=False)
@@ -45,7 +45,7 @@ class Message(Base):
 
     session_id = Column(
         Integer,
-        ForeignKey("sessions.id"),
+        ForeignKey("sessions.id", ondelete="CASCADE"),
         nullable=False
     )
 
@@ -65,7 +65,7 @@ class Context(Base):
 
     session_id = Column(
         Integer,
-        ForeignKey("sessions.id"),
+        ForeignKey("sessions.id", ondelete="CASCADE"),
         nullable=False
     )
 
