@@ -121,7 +121,7 @@ def delete_personality(key: str):
         for session in sessions:
             db.delete(session)
 
-        # Now delete the personality itself
+        # Now delete the personality itselff
         rows = db.query(Personality).filter(Personality.key == key).delete()
         return rows > 0
 
