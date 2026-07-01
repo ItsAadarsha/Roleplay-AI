@@ -313,7 +313,3 @@ def chat(body: ChatRequest):
     
 #  CHRONICLE ENDPOINTS
 
-@app.post("/story/{id}/docs")
-def create_story_document(id: int, body: dict):
-    # Implementation for creating story documents
-    pass
