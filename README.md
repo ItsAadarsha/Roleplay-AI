@@ -159,9 +159,6 @@ The app uses summarization and trimming to manage conversation history. If sessi
 - Increase trimming frequency in `memory.py`
 - Shorten saved history
 
-### MongoDB Connection Issues
-Ensure MongoDB is running and accessible at the `MONGO_URI` specified in your `.env` file.
-
 ## Contributing
 
 1. Fork the repository
